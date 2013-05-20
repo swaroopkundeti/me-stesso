@@ -1,0 +1,66 @@
+#+Title: Port Forwarding Using IPtables 
+#+Author: Swaroop
+
+* Introduction
+
+- Iptables is in built firewall which comes with Linux Operating
+  Systems. Iptables can be used in many ways like filtering, blocking,
+  allowing and port forwarding network packets. In this document we
+  shall see how ports are forwarded using iptables from public to
+  private ip. Before knowing its compulsory to know the numbers of
+  different tcp and udp network protocols.
+
+* Port Forwarding
+
+- Port forwarding or port mapping enables remote connections to
+  connect a specific computer. Technically its similar to
+  routing. Below is simple scenario which forward udp protocol dns(53)
+  port from public to private network.
+- Advantages of Port Forwarding is a single public ip can be used for
+  different services like DNS, Web Server, OpenVpn etc. This also
+  ensures security.
+
+** Forwarding DNS packets.
+
+- Domain swaroop.org has a authoritative dns with name ns.swaroop.org
+  associated with below public ip 1.2.3.4. I configure my dns server
+  with local ip 192.168.1.101 and port map udp port 53 of public ip to
+  private ip, so that the dns requests of ns.swaroop.org will land on
+  192.168.1.101.
+  + Public IP  : 1.2.3.4
+  + Private IP : 192.168.1.101
+  + Ip Table Rule for port forwarding dns from public to private ip :: 
+       INPUT -A PREROUTING -d 1.2.3.4 -p udp -m udp --dport 53 -j DNAT
+       --to-destination 192.168.1.101 
+       
+** Port Forwarding for different services.
+
+*** Forwarding HTTPS and HTTP requests.
+
+- Assume that web server is running in running in different server and
+  have local ip 192.168.1.102 and below is the iptables rule for
+  forwarding http and https requests.
+
+   + Forwarding HTTP Requests ::
+     INPUT -A PREROUTING -d 1.2.3.4 -p tcp -m tcp --dport 80 -j DNAT
+     --to-destination 192.168.1.102
+   + Forwarding HTTPS Requests ::
+     INPUT -A PREROUTING -d 1.2.3.4 -p tcp -m tcp --dport 443 -j DNAT
+     --to-destination 192.168.1.102
+
+*** Forwarding Email services.
+
+- Assuming email server is running in different machine with local ip
+  192.168.1.103. For email we need to forward ports for imap, pop3 and
+  smtp. 
+ + Forwarding SMTP Requests ::
+   INPUT -A PREROUTING -d 1.2.3.4 -p tcp -m tcp --dport 25 -j DNAT
+   --to-destination 192.168.1.103
+ + Forwarding IMAP Requests ::
+   INPUT -A PREROUTING -D 1.2.3.4 -p tcp -m tcp --dport 143 -j DNAT
+   --to-destination 192.168.1.103
+ + Forwarding POP3 Requests ::
+   INPUT -A PREROUTING -D 1.2.3.4 -p tcp -m tcp --dport 110 -j DNAT
+   --to-Destination 192.168.1.103
+
+
