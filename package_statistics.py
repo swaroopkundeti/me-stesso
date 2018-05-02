@@ -20,6 +20,7 @@ architecture = sys.argv[1].lower()
   with below url definition we can directly extract url we wanted for the architecture 
 """
 url = 'http://ftp.uk.debian.org/debian/dists/stable/main/Contents' + '-' + architecture + '.gz'
+print url
 
 """
   Create a empty list, this list will store the package names which gets appended when we extract file in Package_statistics fuction
@@ -39,7 +40,6 @@ def package_statistics(url):
 	"""
 	with gzip.open('file.gz', 'rb') as f:
 		for line in f:
-			# print line
 			str = re.split(', |/', line)
 			PackageNames.append(str[-1])
 
@@ -50,10 +50,9 @@ def package_statistics(url):
 
 	"""
 	PackageDict = Counter(PackageNames)
-	print "{:<20} {:<20}".format('PackageName:','NumberOfFilesAssociatedToPackage:')
 	for PackageName, NumberOfFilesAssociatedToPackage in PackageDict.most_common(10):
-		print PackageName, '\t', NumberOfFilesAssociatedToPackage
-	#print "{} {}".format(PackageName, NumberOfFilesAssociatedToPackage)
+		PackageName = PackageName.rstrip('\n')
+		print "{:20s} <--- {}".format(PackageName, NumberOfFilesAssociatedToPackage)
 	
 
 
