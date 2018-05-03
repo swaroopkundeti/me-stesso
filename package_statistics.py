@@ -1,66 +1,85 @@
 #!/bin/env python
-""" This script is written to download a Contents file associated with architecture (amd64, arm64, mips etc).
-    Note you need to pass the udeb along with the archiecture when you want to see  
-    the statistics of udeb packages example like udeb-amd64 instead of just amd64. 
+""" 
+    This script is written to download a Contents file associated with architecture (amd64, arm64, mips etc).
+    Note this will also extract and process Contents-udeb-* if the architecture matches. 
 """
 
 # Import python modules
 import sys
 import re
 import gzip
-import urllib
+import urllib, urllib2
+from BeautifulSoup import BeautifulSoup
 from collections import Counter
 
 # Assign arg to a variable
 architecture = sys.argv[1].lower()
 
+
 """
-  Construct a url based on user input which is straight forward
-  our goal is defined to extract content files so we don't need to parse all the html href tags
-  with below url definition we can directly extract url we wanted for the architecture 
+   Empty list for contents file (We can expect more than one content file based on architecture) and 
+   for storing list of packages from each file. 
 """
-url = 'http://ftp.uk.debian.org/debian/dists/stable/main/Contents' + '-' + architecture + '.gz'
-print url
+
+files = []
+packageNames = []
+debrepo = "http://ftp.uk.debian.org/debian/dists/stable/main/"
+
+"""
+   FilesExtract fuction will parse the url and extracts the file names based on the filters which is 
+   a regular expression by having extracted with Contents with lookup ahead with architecture
+"""
+
+def FilesExtract():
+    html_page = urllib2.urlopen(debrepo)
+    soup = BeautifulSoup(html_page)
+    filter = 'Contents(?=.*' + str(architecture) + ')'
+    for link in soup.findAll('a',  attrs={'href': re.compile(filter)}):
+    	files.append(link.get('href'))
+    return files
 
 """
   Create a empty list, this list will store the package names which gets appended when we extract file in Package_statistics fuction
 """
-PackageNames = []
+#PackageNames = []
 
-def package_statistics(url):
+def package_statistics():
+	
+	ContentFiles = FilesExtract()
+
 	"""
-		We have existing module in python for parsing url's, here we are using ulllib which connects to url and downloads the package
-	"""
-	connect = urllib.URLopener()
-	connect.retrieve(url, "file.gz")
-	"""
-		Below code extracts the gunzip file with gzip and spliting the lines with regular expression module.
+		From line 62 to 70, code extracts the gunzip file with gzip and spliting the lines with regular expression module.
 		We could use split fuction but here we are spliting the lines with two delimeters which is better doing with
 		regular expressions. After the split we are extracting the PackageName and appending it to PackageNames list.
 	"""
-	with gzip.open('file.gz', 'rb') as f:
-		for line in f:
-			str = re.split(', |/', line)
-			PackageNames.append(str[-1])
-
-	"""
-		Counter function from Collections python package used for counting the occurence of the package names and converting the 
-		list to dictionary, this code is meant to find the number of files associated with the package so each occurence represents
-		its associated file, here number of associated files of a package exactly equal to package name occurence in the list.
-
-	"""
-	PackageDict = Counter(PackageNames)
-	for PackageName, NumberOfFilesAssociatedToPackage in PackageDict.most_common(10):
-		PackageName = PackageName.rstrip('\n')
-		print "{:20s} <--- {}".format(PackageName, NumberOfFilesAssociatedToPackage)
 	
+	""" 
+		From line number 71 to 35 we are using Counter method from Collections package which helping the program to convert the list to
+		Dict by the having value as number of occurence of the word key. The number of occurence is exactly equal to 
+		the number of files associated and we are having print format to output data in tabular form.
+	"""
 
+	for file in ContentFiles:
+		packageNames = []  # Resetting packageNames list
+		url = debrepo + file
+		connect = urllib.URLopener()
+		connect.retrieve(url, "file.gz")
+		with gzip.open('file.gz', 'rb') as f:
+			for line in f:
+				str = re.split(', |/', line)
+				packageNames.append(str[-1])
+		PackageDict = Counter(packageNames)
+		print "The top 10 packages that have the most files associated for : %s" % (file)
+		for PackageName, NumberOfFilesAssociatedToPackage in PackageDict.most_common(10):
+			PackageName = PackageName.rstrip('\n')
+			print "{:20s} <--- {}".format(PackageName, NumberOfFilesAssociatedToPackage)
+    
 
 """
 	We are using variable stats to call function by passing url as parameter. When we print stats we should expect a tabular 
 	representation of data of top 10 packages with most number of associated files.
 """
-stats = package_statistics(url)
+stats = package_statistics()
 if stats is not None:
 	print stats
 
